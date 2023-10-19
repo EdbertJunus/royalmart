@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from .models import Sales
 
-class UploadExcelSerializer(serializers.Serializer):
+class UploadExcelSerializer(serializers.ModelSerializer):
     class Meta:
         model = Sales
-        fields = ['sales_name', 'sales_file']
+        fields = '__all__'

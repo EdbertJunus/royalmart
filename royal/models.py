@@ -9,9 +9,21 @@ class ExtendUser(AbstractUser):
     EMAIL_FIELD = "email"
 
 class Sales(models.Model):
-    sales_name = models.CharField(blank=False, max_length=255, verbose_name="sales_name")
-    sales_file = models.FileField(blank=False)
+    periode = models.CharField(blank=False, max_length=255, null=True)
+    fileSales = models.FileField(null=True)
 
     def __str__(self):
-        return self.sales_name
+        return self.periode
+
+class SalesDetail(models.Model):
+    salesId = models.CharField(blank=False, max_length=255, default='')
+    namaProduk = models.CharField(blank=False, max_length=255)
+    kode = models.IntegerField(blank=False)
+    qty = models.IntegerField(blank=False)
+    jumlah = models.DecimalField(blank=False, max_digits=19, decimal_places=2)
+    hargaPokok = models.DecimalField(blank=False, max_digits=19, decimal_places=2)
+
+
+    def __str__(self):
+        return self.namaProduk
     
