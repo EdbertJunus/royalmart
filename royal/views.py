@@ -68,3 +68,7 @@ class StockView(views.APIView):
             Stock.objects.bulk_create(stocks)
             return JsonResponse({'message': 'success'}, status=status.HTTP_200_OK)
         return JsonResponse({'message': 'failed'}, status=status.HTTP_400_BAD_REQUEST)
+    
+    def get(self, request):
+        stocks = [{'kode': stock.kode, 'namaProduk' : stock.namaProduk, 'bs' : stock.bs, 'total' : stock.total} for stock in Stock.objects.all()]
+        return JsonResponse({'data':stocks}, status=status.HTTP_200_OK)    
