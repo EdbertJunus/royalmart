@@ -27,3 +27,12 @@ class SalesDetail(models.Model):
     def __str__(self):
         return self.namaProduk
     
+class Stock(models.Model):
+    kode = models.IntegerField(blank=False)
+    namaProduk = models.CharField(blank=False, max_length=255)
+    bs = models.IntegerField(blank=False)
+    total = models.IntegerField(blank=False)
+
+    def __str__(self):
+        return self.namaProduk
+    
