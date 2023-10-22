@@ -1,9 +1,8 @@
 
 from django.contrib import admin
-from django.urls import path
-from royal.views import SalesView
+from django.urls import path, include
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('api/sales/', SalesView.as_view(), name='sales'),
+    path('api/', include('royal.urls')),
 ]

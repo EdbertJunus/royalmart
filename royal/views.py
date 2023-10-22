@@ -3,12 +3,15 @@ from rest_framework.response import Response
 import os
 import pandas as pd
 from django.core.files.storage import FileSystemStorage
-from .serializers import SalesSerializer
+from .serializers import SalesSerializer, UserSerializer
 from .models import SalesDetail, Sales
 from .utils import handleSalesFile
 from django.http.response import JsonResponse
+from rest_framework.permissions import IsAuthenticated
 
 class SalesView(views.APIView):
+
+    permission_classes = [IsAuthenticated]
 
     def post(self, request):
         serializer = SalesSerializer(data=request.data)
@@ -36,3 +39,10 @@ class SalesView(views.APIView):
 
         sales = [sales.periode for sales in Sales.objects.all()]
         return JsonResponse({'data':sales}, status=status.HTTP_200_OK)       
+
+class RegisterView(views.APIView):
+    def post(self, request):
+        serializer = UserSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return JsonResponse(serializer.data, status=status.HTTP_201_CREATED)
