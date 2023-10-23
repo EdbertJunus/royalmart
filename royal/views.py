@@ -49,7 +49,7 @@ class RegisterView(views.APIView):
 
 class StockView(views.APIView):
     
-    # permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated]
 
     def post(self, request):
         serializer = StockUploadSerializer(data=request.data)
