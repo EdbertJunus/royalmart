@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import ExtendUser, Sales
+from .models import ExtendUser, Sales, Stock
 
 class SalesSerializer(serializers.ModelSerializer):
     class Meta:
@@ -20,3 +20,11 @@ class UserSerializer(serializers.ModelSerializer):
         user.save()
 
         return user
+
+class StockUploadSerializer(serializers.Serializer):
+    stockFile = serializers.FileField(required=True)
+
+class StockSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Stock
+        fields = '__all__'

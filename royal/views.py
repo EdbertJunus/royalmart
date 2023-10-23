@@ -3,9 +3,9 @@ from rest_framework.response import Response
 import os
 import pandas as pd
 from django.core.files.storage import FileSystemStorage
-from .serializers import SalesSerializer, UserSerializer
-from .models import SalesDetail, Sales
-from .utils import handleSalesFile
+from .serializers import SalesSerializer, UserSerializer, StockSerializer, StockUploadSerializer
+from .models import SalesDetail, Sales, Stock
+from .utils import handleSalesFile, handleMasterFile
 from django.http.response import JsonResponse
 from rest_framework.permissions import IsAuthenticated
 
@@ -33,7 +33,7 @@ class SalesView(views.APIView):
                 obj.save()
             serializer.validated_data['fileSales'] = None
         serializer.save()
-        return Response('Excel file uploaded and processed successfully.')
+        return JsonResponse({'message':'Excel file uploaded and processed successfully.'}, status=status.HTTP_200_OK)  
 
     def get(self, request):
 
@@ -46,3 +46,29 @@ class RegisterView(views.APIView):
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return JsonResponse(serializer.data, status=status.HTTP_201_CREATED)
+
+class StockView(views.APIView):
+    
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        serializer = StockUploadSerializer(data=request.data)
+        if serializer.is_valid(raise_exception=True):
+            stockFile = request.FILES['stockFile']
+            df = pd.read_excel(stockFile)
+            clean_df = handleMasterFile(df)
+            stocks = [
+                Stock(kode=dbframe.KODE, 
+                namaProduk=dbframe._2, bs=dbframe.BS, total=dbframe.TOTAL)
+                for dbframe in clean_df.itertuples()
+            ]
+            print(Stock.objects.all().exists())
+            if Stock.objects.all().exists():
+                Stock.objects.all().delete()
+            Stock.objects.bulk_create(stocks)
+            return JsonResponse({'message': 'success'}, status=status.HTTP_200_OK)
+        return JsonResponse({'message': 'failed'}, status=status.HTTP_400_BAD_REQUEST)
+    
+    def get(self, request):
+        stocks = [{'kode': stock.kode, 'namaProduk' : stock.namaProduk, 'bs' : stock.bs, 'total' : stock.total} for stock in Stock.objects.all()]
+        return JsonResponse({'data':stocks}, status=status.HTTP_200_OK)    
