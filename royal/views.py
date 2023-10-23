@@ -5,9 +5,10 @@ import pandas as pd
 from django.core.files.storage import FileSystemStorage
 from .serializers import SalesSerializer, UserSerializer, StockSerializer, StockUploadSerializer
 from .models import SalesDetail, Sales, Stock
-from .utils import handleSalesFile, handleMasterFile
+from .utils import handleSalesFile, handleMasterFile, sort_by_date
 from django.http.response import JsonResponse
 from rest_framework.permissions import IsAuthenticated
+import datetime
 
 class SalesView(views.APIView):
 
@@ -24,13 +25,21 @@ class SalesView(views.APIView):
             excelData = pd.read_excel(salesFile)
             salesData = handleSalesFile(excelData)
             
-            for dbframe in salesData.itertuples():
-                obj = SalesDetail.objects.create(salesId=periode, 
+            salesDetailObject = [
+                SalesDetail(salesId=periode, 
                 namaProduk=dbframe._2, kode=dbframe.KODE, 
                 qty=dbframe.QTY, jumlah=dbframe.JUMLAH, 
                 hargaPokok=dbframe._6)
+                for dbframe in salesData.itertuples()
+            ]
+            # for dbframe in salesData.itertuples():
+            #     obj = SalesDetail.objects.create(salesId=periode, 
+            #     namaProduk=dbframe._2, kode=dbframe.KODE, 
+            #     qty=dbframe.QTY, jumlah=dbframe.JUMLAH, 
+            #     hargaPokok=dbframe._6)
 
-                obj.save()
+            #     obj.save()
+            SalesDetail.objects.bulk_create(salesDetailObject)
             serializer.validated_data['fileSales'] = None
         serializer.save()
         return JsonResponse({'message':'Excel file uploaded and processed successfully.'}, status=status.HTTP_200_OK)  
@@ -62,7 +71,6 @@ class StockView(views.APIView):
                 namaProduk=dbframe._2, bs=dbframe.BS, total=dbframe.TOTAL)
                 for dbframe in clean_df.itertuples()
             ]
-            print(Stock.objects.all().exists())
             if Stock.objects.all().exists():
                 Stock.objects.all().delete()
             Stock.objects.bulk_create(stocks)
@@ -71,4 +79,25 @@ class StockView(views.APIView):
     
     def get(self, request):
         stocks = [{'kode': stock.kode, 'namaProduk' : stock.namaProduk, 'bs' : stock.bs, 'total' : stock.total} for stock in Stock.objects.all()]
-        return JsonResponse({'data':stocks}, status=status.HTTP_200_OK)    
+        return JsonResponse({'data':stocks}, status=status.HTTP_200_OK)
+
+class MasterView(views.APIView):
+
+    def get(self, request):
+        stock_queryset = Stock.objects.all().values_list('kode', 'namaProduk', 'bs', 'total')
+        stock_df = pd.DataFrame(list(stock_queryset), columns=['kode', 'namaProduk', 'bs', 'total'])
+        salesMonth = list(Sales.objects.all().values_list('periode'))
+        salesMonth = [month[0] for month in salesMonth]
+        sorted_month = sorted(salesMonth, key=sort_by_date)
+        for i, periode in enumerate(sorted_month):
+            print(periode)
+            month = periode.split(' ')[0][:3]
+            year = periode.split(' ')[1][-2:]
+            sales_queryset = SalesDetail.objects.filter(salesId=periode).values_list('namaProduk', 'kode', 'qty')
+            sales_df = pd.DataFrame(list(sales_queryset), columns=['namaProduk', 'kode', 'qty'])
+            stock_df = stock_df.merge(sales_df[['kode', 'qty']], how='left', on='kode', suffixes=[None, '_'+ str(month+'_'+year)])
+        
+        print(stock_df)
+
+        return JsonResponse({'data':'success'}, status=status.HTTP_200_OK)
+

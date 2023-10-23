@@ -1,3 +1,5 @@
+import datetime
+
 def handleSalesFile(sales):
     sales.columns = sales.iloc[2]
     sales = sales.drop([0, 1, 2, 3])
@@ -23,4 +25,16 @@ def handleMasterFile(master_df):
     master_df = master_df[master_df['KODE'] != 'KODE']
     master_df = master_df.astype({"KODE": int, "NAMA STOCK": str, "TOTAL": int})
     master_df.reset_index(drop=True, inplace=True)
-    return master_df 
+    return master_df
+
+def sort_by_date(string):
+    month = string.split(' ')[0]
+    year = string.split(' ')[1]
+    # Convert the month and year to integers.
+    month_int = datetime.datetime.strptime(month, '%B').month
+    year_int = int(year)
+
+    # Create a datetime object from the month and year integers.
+    date = datetime.datetime(year_int, month_int, 1)
+
+    return date
