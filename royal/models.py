@@ -32,6 +32,7 @@ class Stock(models.Model):
     namaProduk = models.CharField(blank=False, max_length=255)
     bs = models.IntegerField(blank=False)
     total = models.IntegerField(blank=False)
+    supplier = models.CharField(blank=False, max_length=255, default='')
 
     def __str__(self):
         return self.namaProduk
