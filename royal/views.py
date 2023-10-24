@@ -5,7 +5,7 @@ import pandas as pd
 from django.core.files.storage import FileSystemStorage
 from .serializers import SalesSerializer, UserSerializer, StockSerializer, StockUploadSerializer
 from .models import SalesDetail, Sales, Stock
-from .utils import handleSalesFile, handleMasterFile, sort_by_date
+from .utils import handleSalesFile, handleMasterFile, sort_by_date, handleMasterSupplier
 from django.http.response import JsonResponse
 from rest_framework.permissions import IsAuthenticated
 import datetime
@@ -58,17 +58,17 @@ class RegisterView(views.APIView):
 
 class StockView(views.APIView):
     
-    permission_classes = [IsAuthenticated]
+    # permission_classes = [IsAuthenticated]
 
     def post(self, request):
         serializer = StockUploadSerializer(data=request.data)
         if serializer.is_valid(raise_exception=True):
             stockFile = request.FILES['stockFile']
             df = pd.read_excel(stockFile)
-            clean_df = handleMasterFile(df)
+            clean_df = handleMasterSupplier(df)
             stocks = [
                 Stock(kode=dbframe.KODE, 
-                namaProduk=dbframe._2, bs=dbframe.BS, total=dbframe.TOTAL)
+                namaProduk=dbframe._2, bs=dbframe.BS, total=dbframe.TOTAL, supplier=dbframe.Supplier)
                 for dbframe in clean_df.itertuples()
             ]
             if Stock.objects.all().exists():
@@ -84,20 +84,21 @@ class StockView(views.APIView):
 class MasterView(views.APIView):
 
     def get(self, request):
-        stock_queryset = Stock.objects.all().values_list('kode', 'namaProduk', 'bs', 'total')
-        stock_df = pd.DataFrame(list(stock_queryset), columns=['kode', 'namaProduk', 'bs', 'total'])
+        stock_queryset = Stock.objects.all().values_list('kode', 'namaProduk', 'bs', 'total', 'supplier')
+        stock_df = pd.DataFrame(list(stock_queryset), columns=['kode', 'namaProduk', 'bs', 'total', 'supplier'])
         salesMonth = list(Sales.objects.all().values_list('periode'))
         salesMonth = [month[0] for month in salesMonth]
         sorted_month = sorted(salesMonth, key=sort_by_date)
         for i, periode in enumerate(sorted_month):
-            print(periode)
             month = periode.split(' ')[0][:3]
             year = periode.split(' ')[1][-2:]
             sales_queryset = SalesDetail.objects.filter(salesId=periode).values_list('namaProduk', 'kode', 'qty')
             sales_df = pd.DataFrame(list(sales_queryset), columns=['namaProduk', 'kode', 'qty'])
             stock_df = stock_df.merge(sales_df[['kode', 'qty']], how='left', on='kode', suffixes=[None, '_'+ str(month+'_'+year)])
         
-        print(stock_df)
-
-        return JsonResponse({'data':'success'}, status=status.HTTP_200_OK)
+        initial_month = sorted_month[0].split(' ')[0][:3]
+        initial_year = sorted_month[0].split(' ')[1][-2:]
+        stock_df.rename(columns={ 'qty' : 'qty_'+str(initial_month)+"_"+str(initial_year)}, inplace=True)
+        result = stock_df.to_dict(orient="records")
+        return JsonResponse({'data': result}, status=status.HTTP_200_OK)
 

@@ -38,3 +38,37 @@ def sort_by_date(string):
     date = datetime.datetime(year_int, month_int, 1)
 
     return date
+
+def handleMasterSupplier(supp_df):
+    supp_df = supp_df.drop([0, 1, 2, 3])
+    supp_df = supp_df.iloc[:, [0, 2, 10, 13, 18, 24]]
+    supp_df.columns = ['KODE', 'NAMA STOCK', 'LAPANGAN', 'BS', 'GUDANG', 'TOTAL']
+    supp_df = supp_df[supp_df['NAMA STOCK'] != 'NAMA STOCK']
+    supp_df = supp_df.dropna(how='all')
+    supp_df['index'] = supp_df.index
+    
+    stock_df = supp_df[supp_df['NAMA STOCK'].notna()]
+    stock_df.reset_index(drop=True, inplace=True)
+
+    supp_list_df = supp_df[supp_df['NAMA STOCK'].isna()]
+    removeDate = supp_list_df['KODE'].str.contains('/') == False
+    supp_list_df = supp_list_df[removeDate]
+    supp_list_df.reset_index(drop=True, inplace=True)
+    # supp_list_df['KODE'].replace('None', 'No Supp', inplace=True)
+    
+    list_supplier = []
+    idx_supp = 0
+    curr_supp = 0
+    next_supp = 0
+    for i in range(len(stock_df)):
+        idx_item = stock_df['index'][i]
+        if(idx_supp != len(supp_list_df)):
+            curr_supp = supp_list_df['index'][idx_supp]
+            next_supp = supp_list_df['index'][idx_supp+1] if (idx_supp < len(supp_list_df) - 1) else curr_supp
+        if(idx_item > next_supp and idx_supp < len(supp_list_df)-1):
+            idx_supp += 1
+        supplier_name = 'No Supp' if (curr_supp > idx_item) else supp_list_df['KODE'][idx_supp]
+        list_supplier.append(supplier_name)
+    
+    stock_df = stock_df.assign(Supplier=list_supplier)
+    return stock_df
