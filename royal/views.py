@@ -58,7 +58,7 @@ class RegisterView(views.APIView):
 
 class StockView(views.APIView):
     
-    # permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated]
 
     def post(self, request):
         serializer = StockUploadSerializer(data=request.data)
@@ -82,6 +82,8 @@ class StockView(views.APIView):
         return JsonResponse({'data':stocks}, status=status.HTTP_200_OK)
 
 class MasterView(views.APIView):
+
+    permission_classes = [IsAuthenticated]
 
     def get(self, request):
         stock_queryset = Stock.objects.all().values_list('kode', 'namaProduk', 'bs', 'total', 'supplier')
