@@ -28,3 +28,6 @@ class StockSerializer(serializers.ModelSerializer):
     class Meta:
         model = Stock
         fields = '__all__'
+
+class MasterSerializer(serializers.Serializer):
+    periode = serializers.CharField(required=True, max_length=255)

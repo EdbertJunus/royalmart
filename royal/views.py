@@ -3,12 +3,12 @@ from rest_framework.response import Response
 import os
 import pandas as pd
 from django.core.files.storage import FileSystemStorage
-from .serializers import SalesSerializer, UserSerializer, StockSerializer, StockUploadSerializer
+from .serializers import SalesSerializer, UserSerializer, StockSerializer, StockUploadSerializer, MasterSerializer
 from .models import SalesDetail, Sales, Stock
 from .utils import handleSalesFile, handleMasterFile, sort_by_date, handleMasterSupplier
 from django.http.response import JsonResponse
 from rest_framework.permissions import IsAuthenticated
-import datetime
+import datetime, json
 
 class SalesView(views.APIView):
 
@@ -47,7 +47,9 @@ class SalesView(views.APIView):
     def get(self, request):
 
         sales = [sales.periode for sales in Sales.objects.all()]
-        return JsonResponse({'data':sales}, status=status.HTTP_200_OK)       
+        sorted_month = sorted(sales, key=sort_by_date)
+
+        return JsonResponse({'data':sorted_month}, status=status.HTTP_200_OK)       
 
 class RegisterView(views.APIView):
     def post(self, request):
@@ -85,22 +87,46 @@ class MasterView(views.APIView):
 
     permission_classes = [IsAuthenticated]
 
-    def get(self, request):
-        stock_queryset = Stock.objects.all().values_list('kode', 'namaProduk', 'bs', 'total', 'supplier')
-        stock_df = pd.DataFrame(list(stock_queryset), columns=['kode', 'namaProduk', 'bs', 'total', 'supplier'])
-        salesMonth = list(Sales.objects.all().values_list('periode'))
-        salesMonth = [month[0] for month in salesMonth]
-        sorted_month = sorted(salesMonth, key=sort_by_date)
-        for i, periode in enumerate(sorted_month):
-            month = periode.split(' ')[0][:3]
-            year = periode.split(' ')[1][-2:]
-            sales_queryset = SalesDetail.objects.filter(salesId=periode).values_list('namaProduk', 'kode', 'qty')
-            sales_df = pd.DataFrame(list(sales_queryset), columns=['namaProduk', 'kode', 'qty'])
-            stock_df = stock_df.merge(sales_df[['kode', 'qty']], how='left', on='kode', suffixes=[None, '_'+ str(month+'_'+year)])
-        
-        initial_month = sorted_month[0].split(' ')[0][:3]
-        initial_year = sorted_month[0].split(' ')[1][-2:]
-        stock_df.rename(columns={ 'qty' : 'qty_'+str(initial_month)+"_"+str(initial_year)}, inplace=True)
-        result = stock_df.to_dict(orient="records")
-        return JsonResponse({'data': result}, status=status.HTTP_200_OK)
+    def post(self, request):
+        serializer = MasterSerializer(data=request.data)
+        if serializer.is_valid(raise_exception=True):
+            periode = serializer.validated_data.get('periode')
+            periode = periode.split(',')
+            stock_queryset = Stock.objects.all().values_list('kode', 'namaProduk', 'bs', 'total', 'supplier')
+            stock_df = pd.DataFrame(list(stock_queryset), columns=['kode', 'namaProduk', 'bs', 'total', 'supplier'])
+            salesMonth = list(Sales.objects.all().values_list('periode'))
+            salesMonth = [month[0] for month in salesMonth]
 
+            chosenMonth = []
+            for m in periode:
+                if(m in salesMonth):
+                    chosenMonth.append(m)
+            
+            sorted_month = sorted(chosenMonth, key=sort_by_date)
+            print(sorted_month)
+            for i, periode in enumerate(sorted_month):
+                month = periode.split(' ')[0][:3]
+                year = periode.split(' ')[1][-2:]
+                sales_queryset = SalesDetail.objects.filter(salesId=periode).values_list('namaProduk', 'kode', 'qty')
+                print('queryset', sales_queryset)
+                sales_df = pd.DataFrame(list(sales_queryset), columns=['namaProduk', 'kode', 'qty'])
+                sales_df['qty'] = sales_df['qty'].astype('Int64')
+                print('salesdf', sales_df.sort_values(by=['kode']))
+                stock_df = stock_df.merge(sales_df[['kode', 'qty']], how='left', on='kode', suffixes=[None, '_'+ str(month+'_'+year)])
+                print('stock df', stock_df.sort_values(by=['kode']).head(20))
+                # print(stock_df)
+            initial_month = sorted_month[0].split(' ')[0][:3]
+            initial_year = sorted_month[0].split(' ')[1][-2:]
+            stock_df.rename(columns={ 'qty' : 'qty_'+str(initial_month)+"_"+str(initial_year)}, inplace=True)
+            result = stock_df.to_dict(orient="records")
+            jsonResult = json.dumps(result)
+            return JsonResponse({'result': jsonResult}, status=status.HTTP_200_OK)
+        return JsonResponse({'message': 'failed'}, status=status.HTTP_400_BAD_REQUEST)
+
+class UserView(views.APIView):
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        username= str(request.user.username)
+        return JsonResponse({'username': username}, status=status.HTTP_200_OK)
