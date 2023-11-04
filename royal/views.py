@@ -108,13 +108,12 @@ class MasterView(views.APIView):
                 month = periode.split(' ')[0][:3]
                 year = periode.split(' ')[1][-2:]
                 sales_queryset = SalesDetail.objects.filter(salesId=periode).values_list('namaProduk', 'kode', 'qty')
-                print('queryset', sales_queryset)
+                
                 sales_df = pd.DataFrame(list(sales_queryset), columns=['namaProduk', 'kode', 'qty'])
                 sales_df['qty'] = sales_df['qty'].astype('Int64')
-                print('salesdf', sales_df.sort_values(by=['kode']))
+                
                 stock_df = stock_df.merge(sales_df[['kode', 'qty']], how='left', on='kode', suffixes=[None, '_'+ str(month+'_'+year)])
-                print('stock df', stock_df.sort_values(by=['kode']).head(20))
-                # print(stock_df)
+                
             initial_month = sorted_month[0].split(' ')[0][:3]
             initial_year = sorted_month[0].split(' ')[1][-2:]
             stock_df.rename(columns={ 'qty' : 'qty_'+str(initial_month)+"_"+str(initial_year)}, inplace=True)
