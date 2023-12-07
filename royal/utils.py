@@ -4,10 +4,7 @@ def handleSalesFile(sales):
     sales.columns = sales.iloc[2]
     sales = sales.drop([0, 1, 2, 3])
     sales = sales.dropna(how='all')
-    qty_loc = 20
-    # if(month_names[i] == 'SALES_MAY.xls'):
-    #     qty_loc = 19
-    sales = sales.iloc[:, [0, 2, 16, qty_loc,28, 32, 35, 39]]
+    sales = sales.iloc[:, [0, 2, 12, 16, 24, 28, 31, 35]]
     sales.columns.values[3] = 'QTY'
     sales.columns.values[4] = 'JUMLAH'
     sales.columns.values[5] = 'HARGA POKOK'
