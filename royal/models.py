@@ -23,7 +23,6 @@ class SalesDetail(models.Model):
     jumlah = models.DecimalField(blank=False, max_digits=19, decimal_places=2)
     hargaPokok = models.DecimalField(blank=False, max_digits=19, decimal_places=2)
 
-
     def __str__(self):
         return self.namaProduk
     
