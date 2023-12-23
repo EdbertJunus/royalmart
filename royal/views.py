@@ -49,7 +49,18 @@ class SalesView(views.APIView):
         sales = [sales.periode for sales in Sales.objects.all()]
         sorted_month = sorted(sales, key=sort_by_date)
 
-        return JsonResponse({'data':sorted_month}, status=status.HTTP_200_OK)       
+        return JsonResponse({'data':sorted_month}, status=status.HTTP_200_OK)
+
+    def delete(self, request):
+        serializer = SalesSerializer(data=request.data)
+        if serializer.is_valid():
+            periode = serializer.validated_data.get('periode')
+
+            if Sales.objects.filter(periode=periode).exists():
+                Sales.objects.filter(periode=periode).delete()
+                SalesDetail.objects.filter(salesId=periode).delete()
+        
+        return JsonResponse({'message': 'Successfull Delete'}, status=status.HTTP_200_OK) 
 
 class RegisterView(views.APIView):
     def post(self, request):
